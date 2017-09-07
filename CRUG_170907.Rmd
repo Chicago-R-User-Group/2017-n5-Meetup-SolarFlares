@@ -494,6 +494,97 @@ cat.str
 
 ![](images/machine_learning.png)
 
+## Deep Learning
+
+> is just a rebranding of neural networks.
+* Geoff Hinton(?), (paraphrased from memory)
+* Deep Learning Summer School, UCLA, 2012
+
+![](images/CIFAR.png)
+
+https://www.ipam.ucla.edu/programs/summer-schools/graduate-summer-school-deep-learning-feature-learning/
+
+## Deep Learning
+
+> “There has been a great deal of hype surrounding neural networks, making them seem magical and mysterious…”
+
+* Elements of Statistical Learning
+
+![](images/Unicorn.png)
+
+## Frameworks {.smaller}
+
+* Tensorflow
+    + Google
+    + Python -> C++
+    + In R:
+      + Supported by Rstudio
+      + R -> Python -> C++
+
+* MXNet
+    + Amazon
+    + Almost anything -> C++
+    + In R:
+      + Supported by Rcpp Core Team
+      + R -> C++
+
+## Frameworks {.smaller}
+
+![](images/JJ.png)
+
+## Tensorflow
+
+* Seemed to have a memory leak
+    + Memory management on the GPU is important
+* Couldn't get the iterator/data loading function to work
+    + CPU should asynchronously load data into GPU while it's working
+    + Hence the JJ intervention
+    + Need this to get full force of the GPU
+* My team used Keras (in Python) to access Tensorflow as a backend
+
+## Tensorflow
+
+
+
+## MXNet
+
+* No memory leak
+    + 100% GPU usage!
+* Iterator function worked
+    + Need to move from clunky CSVs to something more performant
+* Still no success :|
+
+
+# Engineering Considerations
+
+## Data
+
+I've talked enough about data, but clearly you need lots of storage.
+
+## Hardware
+
+![](images/BlackLotus.jpeg)
+
+## Hardware
+
+* GPUs are important.
+* 10x speed up over CPUs (54 threads)
+* Rich man's game :/
+* Suggest getting a cheap GPU or high end CPU to develop
+    + Move it over to the cloud (Softlayer, AWS) for scaling up
+    + Going to want your data in cloud storage for that
+
 # Going Forward
+
+## Open Problem!
+
+* My team was able to get many of the data issues sorted.
+* Our best networks were either predicting constant values or overfit
+* Still no success :|
+    + 1024x1024 images are 16x bigger than Imagenet
+    + 20k images are 50x fewer than Imagenet
+    + Knowing the correct architecture is the key 
+* The Earth (and your entertainment depends on it).
+* The perfect opportunity to try deep learning in R.
 
 # The End
