@@ -1,0 +1,358 @@
+---
+title: Deep Learning for <br> Solar Flare Prediction
+author: Troy Hernandez
+        @ the Chicago R User Group
+date: "9/7/2017"
+output: 
+  ioslides_presentation:
+    logo: images/ibm.png
+    widescreen: true
+    smaller: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## AR12673 {.flexbox .vcenter .smaller}
+
+<blockquote class="twitter-tweet" data-lang="en"><p lang="en" dir="ltr">X2.2 and X9.3 flares from <a href="https://twitter.com/hashtag/AR12673?src=hash">#AR12673</a> today. They were both gorgeous flares, but there is huge difference in terms of their possible geo-impact <a href="https://t.co/5caTxLZu9k">pic.twitter.com/5caTxLZu9k</a></p>&mdash; Halo CME (@halocme) <a href="https://twitter.com/halocme/status/905496088513269763">September 6, 2017</a></blockquote>
+<script async src="//platform.twitter.com/widgets.js" charset="utf-8"></script>
+
+<!-- <iframe width="400" height="225" src="https://twitter.com/halocme/status/905496088513269763" frameborder="0"></iframe> -->
+
+## Tom Bogdan {.flexbox .vcenter .smaller}
+
+<img src="images/TomBogdan.jpeg" style="width: 500px;"/>
+
+* Director, Space Weather Prediction, NOAA 2006 - 2012
+* President, University Corporation for Atmospheric Research, 2012 - 2015
+
+## Big Picture | Tom Bogdan {.flexbox .vcenter}
+
+<img src="images/Bogdan1.png" style="width: 650px;"/>
+
+## Big Picture {.flexbox .vcenter .smaller}
+
+Customer Impacts
+
+* Aviation
+    + HF Communications used for Air Traffic Control
+    + GPS enabled approach and landing in use at major airports
+    + Radiation doses to flight crews and passengers
+* Precision GPS
+    + Ubiquitous in construction and agriculture
+    + Transportation network monitoring
+    + Timing/sync for telecom, power grid, and financial systems
+* Satellites
+    + Telecommunications relay for the planet
+    + Surveillance and reconnaissance
+    + National security assets on orbit
+    + On demand entertainment
+* Power Grid
+
+## Outline
+
+1. Frontier Development Lab
+2. Heliophysics
+3. The Data
+4. Deep Learning
+5. Going Forward
+
+# Frontier Development Lab
+
+## FDL {.flexbox .vcenter .smaller}
+
+> NASA Frontier Development Lab is an AI R&D accelerator that tackles knowledge gaps useful to the space program. The program is an intense 8-week concentrated study on topics not only important to NASA, but also to humanity’s future.
+
+<img src="images/fdl_circle.png" style="width: 350px;"/>
+
+## Space Camp... 25 Years Later {.flexbox .vcenter .smaller}
+
+<img src="images/OnionSpacecamp.png" style="width: 500px;"/>
+
+## NASA Ames {.flexbox .vcenter .smaller}
+
+<img src="images/AmesPick.jpeg" style="width: 650px;"/>
+
+## IBM's Partnership | ME!!! {.flexbox .vcenter}
+
+Also, 16 of these for 2 months
+
+![](images/SoftLayer.png)
+
+## 5 Teams
+
+- Radar 3D Shape Modeling
+- Long Period Comets
+- Lunar Water and Volatiles
+- Solar Storm Prediction
+- Solar-Terrestrial Interactions
+
+## 5 Teams
+
+- Radar 3D Shape Modeling
+- Long Period Comets
+- Lunar Water and Volatiles
+- **Solar Storm Prediction**
+- Solar-Terrestrial Interactions
+
+## XKCD 1831 | Here to Help {.flexbox .vcenter}
+
+![](images/here_to_help.png)
+
+# Heliophysics
+
+## XKCD 1851 | Magnetohydrodynamics {.flexbox .vcenter}
+
+![](images/magnetohydrodynamics.png)
+
+## Youtube Video
+
+<iframe width="400" height="225" src="https://www.youtube.com/embed/ReSi_kPTNIc?rel=0&amp;start=91" frameborder="0"></iframe>
+
+## Big Picture | Tom Bogdan {.flexbox .vcenter}
+
+<img src="images/Bogdan1.png" style="width: 650px;"/>
+
+# The Data
+
+## X-ray Flux {.flexbox .vcenter .smaller}
+
+<img src="images/GOES.png" style="width: 650px;"/>
+
+http://www.swpc.noaa.gov/products/goes-x-ray-flux
+
+## GOES 15 {.flexbox .vcenter}
+
+From March 2010:
+
+https://www.ngdc.noaa.gov/stp/satellite/goes/dataaccess.html
+
+https://satdat.ngdc.noaa.gov/sem/goes/data/new_full/2010/04/goes15/
+
+## Teamwork! {.flexbox .vcenter}
+
+```{r, echo = TRUE, cache=TRUE}
+flux <- read.csv("data/Flux_2010_2015.csv")
+head(flux)
+```
+
+Need a script like the following one to pull down the CSVs.
+
+Take the max over some interval.
+
+## X-ray Flux {.flexbox .vcenter .smaller}
+
+```{r, echo = FALSE, cache=TRUE}
+flux$Time <- as.POSIXct(flux$Time, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
+plot(flux[1:100000, 1:2], type = "l", xlab = "Date", ylab = "X-ray Flux",
+     ylim = c(0, 10e-4))
+abline(10e-04, 0)
+abline(10e-05, 0, col = 2)
+abline(10e-06, 0, col = 3)
+abline(10e-07, 0, col = 4)
+legend("topright", legend = c("X-class", "M-class", "C-class", "B-class"),
+          lty = 1, col = 1:4, cex = .75)
+```
+
+## X-ray Flux Log {.flexbox .vcenter .smaller}
+
+```{r, echo = FALSE, cache=TRUE}
+plot(x = flux[1:100000, 1], y = log(flux[1:100000, 2]), type = "l", xlab = "Date", ylab = "X-ray Flux")
+abline(log(10e-04), 0)
+abline(log(10e-05), 0, col = 2)
+abline(log(10e-06), 0, col = 3)
+abline(log(10e-07), 0, col = 4)
+legend("topright", legend = c("X-class", "M-class", "C-class", "B-class"),
+          lty = 1, col = 1:4, cex = .75)
+```
+
+
+## Solar Dynamics Observatory (SDO) {.flexbox .vcenter .smaller}
+
+<img src="images/SDO.jpeg" style="width: 500px;"/>
+
+> The Solar Dynamics Observatory (SDO) is a NASA mission which has been observing the Sun since 2010. Launched on February 11, 2010, the observatory is part of the Living With a Star (LWS) program.
+
+https://en.wikipedia.org/wiki/Solar_Dynamics_Observatory
+
+## Atmospheric Imaging Assembly (AIA)
+
+* Led from the Lockheed Martin Solar and Astrophysics Laboratory (LMSAL)
+* Provides continuous full-disk observations of the solar chromosphere and corona in 8 channels/temperatures
+* Image stream provides unprecedented views of the various phenomena that occur within the evolving solar outer atmosphere
+    + 12-second cadence
+    + 4096 by 4096 pixels
+    + 2010 - Present
+
+## Petabytes of data
+
+* Image stream provides unprecedented views of the various phenomena that occur within the evolving solar outer atmosphere
+    + 12-second cadence -> 12-minute cadence
+    + 4096 by 4096 pixels -> 1024 by 1024 pixels
+    + 2010 - Present -> 2014 (Jan-Jun)
+
+From PBs to GBs...
+
+## Downloading that data {.smaller}
+
+```{r, echo = TRUE, eval = FALSE}
+create.file.list <- function(which.months = 1:6){
+  base.url <- "http://jsoc.stanford.edu/data/aia/synoptic/2014/"
+  months <- sprintf("%02.f", 1:12)[which.months]
+  max.days <- c(31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31)[which.months]
+  hours <- sprintf("%02.f", 0:23)
+  minutes <- sprintf("%02.f", c(00, 12, 24, 36, 48))
+  wl <- c("0094", "0131", "0171", "0193", "0211", "0304", "0335", "1600")
+  target.file.list <- target.urls <- rep("", sum(max.days) * 5 * 24 * 8)
+  ind <- 1
+  for(i in 1:length(months)){
+    for(j in 1:(max.days[i])){
+      for(k in 1:length(hours)){
+        for(l in 1:length(minutes)){
+          for(m in 1:length(wl)){
+            aia.url <- paste0(base.url, months[i], "/",
+                              sprintf("%02.f", j), "/H", hours[k], "00/")
+            aia.file <- paste0("AIA2014", months[i],
+                               sprintf("%02.f", j), "_", hours[k], minutes[l], "_", wl[m], ".fits")
+            target.file.list[ind] <- aia.file
+            target.urls[ind] <- paste0(aia.url, aia.file)
+            ind <- ind + 1
+          }
+        }
+      }
+    }
+  }
+  target.files <- list(target.file.list, target.urls)
+}
+```
+
+## Downloading that data
+
+```{r, echo = TRUE, eval = FALSE}
+download.aia.2014 <- function(target.dir = "/NASA/AIA2014/",
+                              target.file.list, target.urls,
+                              which.months = 1:6){
+  # Check existing files
+  lf <- list.files(target.dir)
+  done.list <- which(target.file.list %in% lf)
+  todo.list <- c(1:length(target.file.list))[-done.list]
+
+  # Download only missing data  
+  for(i in 1:length(todo.list)){
+    try(download.file(url = target.urls[todo.list[i]],
+                  destfile = paste0(target.dir,
+                                    target.file.list[todo.list[i]]),
+                  method = "libcurl"),
+        silent = TRUE)
+  }
+}
+```
+
+
+## Generate all channel index {.smaller}
+
+```{r, echo = TRUE, eval = FALSE}
+aia.index.allchannels <- function(target.dir = "/NASA/AIA2014/"){
+  lf <- list.files(target.dir)
+  time.stamp <- substr(lf, 1, 16)
+  wave.length <- substr(lf, 18, 21)
+  time.wave.tbl <- table(time.stamp, wave.length)
+  time.wave.tbl8 <- time.wave.tbl[, 1:8]
+  num.channels <- apply(time.wave.tbl8, 1, sum)
+  all.channels <- num.channels == 8
+  sum(all.channels)
+  all.channels.times <- rownames(time.wave.tbl8)[all.channels]
+  year <- as.numeric(substr(all.channels.times, 4, 7))
+  month <- as.numeric(substr(all.channels.times, 8, 9))
+  day <-as.numeric(substr(all.channels.times, 10, 11))
+  hour <- as.numeric(substr(all.channels.times, 13, 14))
+  minute <- as.numeric(substr(all.channels.times, 15, 16))
+  AIAindex.allchannels <- cbind(year, month, day, hour, minute)
+  AIAindex.allchannels.POSIX <- as.POSIXct(paste(
+    paste(AIAindex.allchannels[, 1],
+          sprintf("%02.f", AIAindex.allchannels[, 2]),
+          sprintf("%02.f", AIAindex.allchannels[, 3]), sep = "-"),
+    paste(sprintf("%02.f", AIAindex.allchannels[, 4]),
+          sprintf("%02.f", AIAindex.allchannels[, 5]), "00", sep = ":"),
+    sep = " "), tz = "UTC")
+  write.csv(AIAindex.allchannels.POSIX,
+            paste0("AIA_index_allChannels_", Sys.Date(),".csv"),
+            row.names = F)
+}
+```
+
+## On file type choices
+
+1. Binaries are fast, you should use them. They are faster and smaller
+    + R: Rds
+    + Python: npy
+    + Cross-functional team: feather!
+2. If you doing deep learning, you should use their supported type:
+    + Tensorflow - Standard TF Format, FWF, CSV
+        + https://www.tensorflow.org/api_guides/python/reading_data
+    + MxNet - Record IO, image data, CSV
+        + https://mxnet.incubator.apache.org/tutorials/basic/data.html
+3. Tensorflow $\cap$ MxNet = CSV
+    + Custom iterators exist, but... more on this later.
+
+## Generate Usable Data
+
+```{r, echo = TRUE, eval = FALSE}
+library(doParallel)
+library(foreach)
+library(feather)
+library(reticulate)
+registerDoParallel(cores=detectCores())
+astropy <- import("astropy")
+```
+
+1. Convert to Feather
+2. Take mean, sd of logged values
+3. Create PCA mod
+3. Apply mean, sd, PCA
+4. Take mean, sd of PCA-ed data
+
+## Generate Usable Data - Feather  {.smaller}
+
+```{r, echo = TRUE, eval = FALSE}
+lf <- list.files("/NASA/AIA2014/")
+all.channel.index.POSIX <- as.POSIXct(read.csv("AIA_index_allChannels.csv",
+                                               stringsAsFactors = FALSE)[[2]],
+                                      tz = "UTC")
+
+all.channel.index <- outer(format(all.channel.index.POSIX, "%Y%m%d_%H%M"),
+                           c("_0094", "_0131", "_0171", "_0193",
+                             "_0211", "_0304", "_0335", "_1600"),
+                           paste, sep = "")
+
+
+foreach(i = 1:nrow(all.channel.index)) %dopar% {
+  big.mat <- matrix(NA, nrow = 1024*1024, ncol = 8)
+  for(j in 1:8){
+    temp <- astropy$io$fits$open(paste0("/NASA/AIA2014/AIA", all.channel.index[i, j], ".fits"))
+    temp$verify("fix")
+    exp.time <- as.numeric(substring(strsplit(as.character(temp[[1]]$header),
+                                              "EXPTIME")[[1]][2], 4, 12))
+    temp.mat <- temp[[1]]$data
+    temp.mat[temp.mat <= 0] <- 0
+    temp.mat <- temp.mat + 1
+    big.mat[, j] <- c(t(temp.mat / exp.time))
+  }
+  write_feather(as.data.frame(big.mat), paste0("/NASA/FeatherAIA2014/AIA",
+                       format(all.channel.index.POSIX[i], "%Y%m%d_%H%M"),
+                       ".feather"))
+}
+```
+
+
+# Deep Learning
+
+## XKCD 1838 | Machine Learning {.flexbox .vcenter}
+
+![](images/machine_learning.png)
+
+# Going Forward
+
+# The End
