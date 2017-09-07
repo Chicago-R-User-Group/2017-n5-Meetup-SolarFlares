@@ -231,13 +231,16 @@ create.file.list <- function(which.months = 1:6){
 ## Downloading that data
 
 ```{r, echo = TRUE, eval = FALSE}
-download.aia.2014 <- function(target.dir = "/NASA/AIA2014/",
-                              target.file.list, target.urls,
-                              which.months = 1:6){
+download.aia.2014 <- function(target.dir = "data/AIA2014/",
+                              target.file.list, target.urls){
   # Check existing files
   lf <- list.files(target.dir)
   done.list <- which(target.file.list %in% lf)
-  todo.list <- c(1:length(target.file.list))[-done.list]
+  if(length(done.list) > 0){
+    todo.list <- c(1:length(target.file.list))[-done.list]
+  } else {
+    todo.list <- c(1:length(target.file.list))
+  }
 
   # Download only missing data  
   for(i in 1:length(todo.list)){
@@ -249,13 +252,23 @@ download.aia.2014 <- function(target.dir = "/NASA/AIA2014/",
   }
 }
 ```
+## Downloading that data
 
+We'll only look at the first two samples of data; i.e. the first 16 fits files.
+
+```{r, echo = TRUE, eval = FALSE}
+temp.file.list <- create.file.list(which.months = 1)
+download.aia.2014(target.dir = "data/AIA2014/",
+                  target.file.list = temp.file.list[[1]][1:16],
+                  target.urls = temp.file.list[[2]][1:16])
+```
 
 ## Generate all channel index {.smaller}
 
-```{r, echo = TRUE, eval = FALSE}
-aia.index.allchannels <- function(target.dir = "/NASA/AIA2014/"){
-  lf <- list.files(target.dir)
+```{r, echo = TRUE, eval = TRUE, cache = TRUE}
+aia.index.allchannels <- function(target.dir = "data/",
+                                  target.file.dir = "data/AIA2014/"){
+  lf <- list.files(target.file.dir)
   time.stamp <- substr(lf, 1, 16)
   wave.length <- substr(lf, 18, 21)
   time.wave.tbl <- table(time.stamp, wave.length)
@@ -278,7 +291,7 @@ aia.index.allchannels <- function(target.dir = "/NASA/AIA2014/"){
           sprintf("%02.f", AIAindex.allchannels[, 5]), "00", sep = ":"),
     sep = " "), tz = "UTC")
   write.csv(AIAindex.allchannels.POSIX,
-            paste0("AIA_index_allChannels_", Sys.Date(),".csv"),
+            paste0(target.dir, "AIA_index_allChannels_", Sys.Date(),".csv"),
             row.names = F)
 }
 ```
@@ -294,33 +307,37 @@ aia.index.allchannels <- function(target.dir = "/NASA/AIA2014/"){
         + https://www.tensorflow.org/api_guides/python/reading_data
     + MxNet - Record IO, image data, CSV
         + https://mxnet.incubator.apache.org/tutorials/basic/data.html
-3. Tensorflow $\cap$ MxNet = CSV
+3. Tensorflow $\cap$ MxNet == CSV
     + Custom iterators exist, but... more on this later.
 
 ## Generate Usable Data
 
-```{r, echo = TRUE, eval = FALSE}
+```{r, echo = TRUE, eval = TRUE, message = FALSE, cache = TRUE}
 library(doParallel)
 library(foreach)
 library(feather)
 library(reticulate)
 registerDoParallel(cores=detectCores())
 astropy <- import("astropy")
+aia.index.allchannels(target.dir = "data/", target.file.dir = "data/AIA2014/")
 ```
 
 1. Convert to Feather
 2. Take mean, sd of logged values
-3. Create PCA mod
+3. Create PCA model
 3. Apply mean, sd, PCA
 4. Take mean, sd of PCA-ed data
 
 ## Generate Usable Data - Feather  {.smaller}
 
 ```{r, echo = TRUE, eval = FALSE}
-lf <- list.files("/NASA/AIA2014/")
-all.channel.index.POSIX <- as.POSIXct(read.csv("AIA_index_allChannels.csv",
-                                               stringsAsFactors = FALSE)[[2]],
-                                      tz = "UTC")
+lf <- list.files("data/AIA2014/")
+target.dir = "data/"
+all.channel.index.POSIX <- as.POSIXct(read.csv(paste0(target.dir,
+                                                      "AIA_index_allChannels_",
+                                                      Sys.Date(),".csv"),
+                                               stringsAsFactors = FALSE)[[1]],
+                                      tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
 
 all.channel.index <- outer(format(all.channel.index.POSIX, "%Y%m%d_%H%M"),
                            c("_0094", "_0131", "_0171", "_0193",
@@ -331,7 +348,7 @@ all.channel.index <- outer(format(all.channel.index.POSIX, "%Y%m%d_%H%M"),
 foreach(i = 1:nrow(all.channel.index)) %dopar% {
   big.mat <- matrix(NA, nrow = 1024*1024, ncol = 8)
   for(j in 1:8){
-    temp <- astropy$io$fits$open(paste0("/NASA/AIA2014/AIA", all.channel.index[i, j], ".fits"))
+    temp <- astropy$io$fits$open(paste0("data/AIA2014/AIA", all.channel.index[i, j], ".fits"))
     temp$verify("fix")
     exp.time <- as.numeric(substring(strsplit(as.character(temp[[1]]$header),
                                               "EXPTIME")[[1]][2], 4, 12))
@@ -340,12 +357,136 @@ foreach(i = 1:nrow(all.channel.index)) %dopar% {
     temp.mat <- temp.mat + 1
     big.mat[, j] <- c(t(temp.mat / exp.time))
   }
-  write_feather(as.data.frame(big.mat), paste0("/NASA/FeatherAIA2014/AIA",
+  write_feather(as.data.frame(big.mat), paste0("data/FeatherAIA2014/AIA",
                        format(all.channel.index.POSIX[i], "%Y%m%d_%H%M"),
                        ".feather"))
 }
 ```
 
+## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+
+```{r, echo = TRUE, cache = TRUE}
+lf.train <- list.files("data/FeatherAIA2014/")
+
+temp.mat <- read_feather(paste0("data/FeatherAIA2014/", lf.train[1]))
+hist(as.matrix(temp.mat)[, 1])
+```
+
+## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+
+```{r, echo = TRUE, cache = TRUE}
+hist(log(as.matrix(temp.mat))[, 1])
+```
+
+
+## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+
+```{r, echo = TRUE, cache = TRUE}
+image(matrix(as.matrix(temp.mat)[, 1], nrow = 1024), zlim = c(-2, 2),
+      xaxt = "n", yaxt = "n")
+```
+
+## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+
+```{r, echo = TRUE, cache = TRUE}
+image(matrix(log(as.matrix(temp.mat))[, 1], nrow = 1024), zlim = c(-2, 2),
+      xaxt = "n", yaxt = "n")
+```
+
+## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+
+Untransformed AIA Images
+
+<img src="images/AIAUntransformed.png" style="width: 750px;"/>
+
+## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+
+Logged AIA Images
+
+<img src="images/AIALog.png" style="width: 750px;"/>
+
+## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+
+Logged, centered, scaled, PCA-ed AIA Images
+
+<img src="images/AIALogPCA.png" style="width: 750px;"/>
+
+## Generate Usable Data - Scale  {.smaller}
+
+```{r, echo = FALSE, eval = TRUE}
+target.dir = "data/"
+all.channel.index.POSIX <- as.POSIXct(read.csv(paste0(target.dir,
+                                                      "AIA_index_allChannels_",
+                                                      Sys.Date(),".csv"),
+                                               stringsAsFactors = FALSE)[[1]],
+                                      tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
+```
+
+```{r, echo = TRUE, eval = FALSE}
+mean.log <- foreach(i = 1:length(lf.train), .combine = rbind) %dopar% {
+  file.name <- paste0("data/FeatherAIA2014/AIA",
+                      format(all.channel.index.POSIX[i], "%Y%m%d_%H%M"),
+                      ".feather")
+
+  temp.mat <- read_feather(file.name)
+  apply(log(temp.mat), 2, mean)
+}
+
+write.csv(mean.log, "data/MeanPostLog.csv", row.names = FALSE)
+mean.vec <- apply(mean.log, 2, mean)
+```
+
+## Generate Usable Data - Scale  {.smaller}
+
+```{r, echo = TRUE, eval = FALSE}
+sd.log <- foreach(i = 1:length(lf.train), .combine = rbind) %dopar% {
+  file.name <- paste0("data/FeatherAIA2014/AIA",
+                      format(all.channel.index.POSIX[i], "%Y%m%d_%H%M"),
+                      ".feather")
+
+  temp.mat <- read_feather(file.name)
+  apply(t(t(temp.mat) - mean.vec), 2, sd)
+}
+
+write.csv(sd.log, "data/SdPostLog.csv", row.names = FALSE)
+sd.vec <- sqrt(apply(sd.log ^ 2, 2, mean))
+
+```
+
+## Generate Usable Data - CSV  {.smaller}
+
+```{r, echo = TRUE, eval = FALSE}
+lf <- list.files("data/FeatherAIA2014/")
+foreach(i = 1:length(lf)) %dopar% {
+  temp.mat <- as.matrix(read_feather(paste0("data/FeatherAIA2014/", lf[i])))
+  # Take all 8 dimensions and flatten out.
+  temp.mat <- round(c(t((t(temp.mat) - mean.vec) / sd.vec)[, 1:8]), 2)
+  
+  write.table(matrix(temp.mat, nrow = 1),
+                     paste0("data/CSVAIA2014/", substring(lf[i], 1, 16), ".csv"),
+              sep=',', row.names=FALSE, col.names=FALSE)
+}
+
+```
+
+## Generate One Big CSV  {.smaller}
+
+```{r, echo = TRUE, eval = FALSE}
+lf <- list.files("data/CSVAIA2014/")
+
+cat.str <- paste0("cat ", paste(lf, collapse = " "),
+                  " > data/AIA2014_Big.csv")
+cat.str
+system(cat.str)
+```
+
+```{r, echo = FALSE, eval = TRUE}
+lf <- list.files("data/CSVAIA2014/")
+
+cat.str <- paste0("cat ", paste(lf, collapse = " "),
+                  " > data/AIA2014_Big.csv")
+cat.str
+```
 
 # Deep Learning
 
