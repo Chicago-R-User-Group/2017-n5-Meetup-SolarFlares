@@ -144,7 +144,7 @@ Take the max over some interval.
 
 ## X-ray Flux {.flexbox .vcenter .smaller}
 
-```{r, echo = FALSE, cache=TRUE}
+```{r, echo = FALSE, cache=FALSE}
 flux$Time <- as.POSIXct(flux$Time, format = "%Y-%m-%d %H:%M:%S", tz = "UTC")
 plot(flux[1:100000, 1:2], type = "l", xlab = "Date", ylab = "X-ray Flux",
      ylim = c(0, 10e-4))
@@ -158,7 +158,7 @@ legend("topright", legend = c("X-class", "M-class", "C-class", "B-class"),
 
 ## X-ray Flux Log {.flexbox .vcenter .smaller}
 
-```{r, echo = FALSE, cache=TRUE}
+```{r, echo = FALSE, cache=FALSE}
 plot(x = flux[1:100000, 1], y = log(flux[1:100000, 2]), type = "l", xlab = "Date", ylab = "X-ray Flux")
 abline(log(10e-04), 0)
 abline(log(10e-05), 0, col = 2)
@@ -557,6 +557,14 @@ https://www.ipam.ucla.edu/programs/summer-schools/graduate-summer-school-deep-le
 
 ![](images/Unicorn.png)
 
+
+## Approaches
+
+* Most image recognition is classification; we're doing regression
+* Image recognition + Time Series = Video
+    + https://blog.coast.ai/five-video-classification-methods-implemented-in-keras-and-tensorflow-99cad29cc0b5
+
+
 ## Frameworks {.smaller}
 
 * Tensorflow
@@ -585,6 +593,7 @@ https://www.ipam.ucla.edu/programs/summer-schools/graduate-summer-school-deep-le
     + CPU should asynchronously load data into GPU while it's working
     + Hence the JJ intervention
     + Need this to get full force of the GPU
+    + https://www.tensorflow.org/programmers_guide/reading_data
 * My team used Keras (in Python) to access Tensorflow as a backend
 
 
@@ -592,8 +601,9 @@ https://www.ipam.ucla.edu/programs/summer-schools/graduate-summer-school-deep-le
 
 * No memory leak
     + 100% GPU usage!
-* Iterator function worked
+* Iterator function worked!
     + Need to move from clunky CSVs to something more performant
+    + http://mxnet.io/api/python/io.html
 * Still no success :|
 
 
