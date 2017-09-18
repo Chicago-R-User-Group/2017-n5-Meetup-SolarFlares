@@ -1,4 +1,4 @@
-# CRUGmeetup_170907
+# Deep Learning for Solar Flare Prediction Using R
 
 [Troy Hernandez](http://www.TroyHernandez.com) spent the summer at NASA Ames mentoring the [Frontier Development Lab](http://frontierdevelopmentlab.org); Solar Storm Prediction Team to create a deep learning system capable of predicting solar flares. This talk will cover:
 
