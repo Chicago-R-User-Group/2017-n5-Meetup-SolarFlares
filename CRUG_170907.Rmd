@@ -267,7 +267,8 @@ download.aia.2014(target.dir = "data/AIA2014/",
 
 ```{r, echo = TRUE, eval = TRUE, cache = TRUE}
 aia.index.allchannels <- function(target.dir = "data/",
-                                  target.file.dir = "data/AIA2014/"){
+                                  target.file.dir = "data/AIA2014/",
+                                  temp.date = Sys.Date()){
   lf <- list.files(target.file.dir)
   time.stamp <- substr(lf, 1, 16)
   wave.length <- substr(lf, 18, 21)
@@ -291,7 +292,7 @@ aia.index.allchannels <- function(target.dir = "data/",
           sprintf("%02.f", AIAindex.allchannels[, 5]), "00", sep = ":"),
     sep = " "), tz = "UTC")
   write.csv(AIAindex.allchannels.POSIX,
-            paste0(target.dir, "AIA_index_allChannels_", Sys.Date(),".csv"),
+            paste0(target.dir, "AIA_index_allChannels_", temp.date,".csv"),
             row.names = F)
 }
 ```
@@ -319,7 +320,8 @@ library(feather)
 library(reticulate)
 registerDoParallel(cores=detectCores())
 astropy <- import("astropy")
-aia.index.allchannels(target.dir = "data/", target.file.dir = "data/AIA2014/")
+aia.index.allchannels(target.dir = "data/", target.file.dir = "data/AIA2014/",
+                      temp.date = "2017-09-07")
 ```
 
 1. Convert to Feather
@@ -333,9 +335,10 @@ aia.index.allchannels(target.dir = "data/", target.file.dir = "data/AIA2014/")
 ```{r, echo = TRUE, eval = FALSE}
 lf <- list.files("data/AIA2014/")
 target.dir = "data/"
+temp.date = "2017-09-07"
 all.channel.index.POSIX <- as.POSIXct(read.csv(paste0(target.dir,
                                                       "AIA_index_allChannels_",
-                                                      Sys.Date(),".csv"),
+                                                      temp.date,".csv"),
                                                stringsAsFactors = FALSE)[[1]],
                                       tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
 
@@ -365,59 +368,99 @@ foreach(i = 1:nrow(all.channel.index)) %dopar% {
 
 ## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
 
-```{r, echo = TRUE, cache = TRUE}
+```{r, echo = TRUE, eval = FALSE, cache = TRUE}
 lf.train <- list.files("data/FeatherAIA2014/")
-
 temp.mat <- read_feather(paste0("data/FeatherAIA2014/", lf.train[1]))
+par(mfrow=c(2,4), mar=c(1,1,1,1), oma=c(0.5,0.5,0.5,0.5))
 hist(as.matrix(temp.mat)[, 1])
 ```
 
+```{r, echo = FALSE, eval = TRUE, cache = TRUE, fig.height=4, fig.width=8}
+lf.train <- list.files("data/FeatherAIA2014/")
+temp.mat <- read_feather(paste0("data/FeatherAIA2014/", lf.train[1]))
+par(mfrow=c(2,4), mar=c(1,1,1,1), oma=c(1,1,0.5,0.5))
+for(i in 1:8){
+  hist(as.matrix(temp.mat)[, i], main = "")
+}
+```
+
+
 ## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
 
-```{r, echo = TRUE, cache = TRUE}
+```{r, echo = TRUE, eval = FALSE, cache = TRUE}
 hist(log(as.matrix(temp.mat))[, 1])
 ```
 
+```{r, echo = TRUE, cache = TRUE, fig.height=4, fig.width=8}
+par(mfrow=c(2,4), mar=c(1,1,1,1), oma=c(1,1,0.5,0.5))
+for(i in 1:8){
+  hist(log(as.matrix(temp.mat))[, i], main = "")
+  # image(matrix(as.matrix(temp.mat2)[, i], nrow = 1024), zlim = c(-2, 2), xaxt = "n", yaxt = "n")
+}
 
-## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+```
 
-```{r, echo = TRUE, cache = TRUE}
-image(matrix(as.matrix(temp.mat)[, 1], nrow = 1024), zlim = c(-2, 2),
+
+## Generate Usable Data - Untransformed Data {.flexbox .vcenter .smaller}
+
+```{r, echo = TRUE, eval = FALSE, cache = TRUE}
+par(mfrow=c(2,4), mar=c(1,1,1,1), oma=c(0.5,0.5,0.5,0.5))
+temp.mat2 <- scale(temp.mat)
+image(matrix(as.matrix(temp.mat2)[, 1], nrow = 1024), zlim = c(-2, 2), xaxt = "n", yaxt = "n")
+```
+
+```{r, echo = FALSE, eval = TRUE, cache = TRUE, fig.height=4, fig.width=8}
+par(mfrow=c(2,4), mar=c(1,1,1,1), oma=c(0.5,0.5,0.5,0.5))
+temp.mat2 <- scale(temp.mat)
+for(i in 1:8){
+  image(matrix(as.matrix(temp.mat2)[, i], nrow = 1024), zlim = c(-2, 2), xaxt = "n", yaxt = "n")
+}
+```
+
+## Generate Usable Data - Logged/Scaled Data {.flexbox .vcenter .smaller}
+
+```{r, echo = TRUE, eval = FALSE, cache = TRUE}
+temp.mat2 <- scale(log(temp.mat))
+image(matrix(as.matrix(temp.mat2)[, 1], nrow = 1024), zlim = c(-2, 2),
       xaxt = "n", yaxt = "n")
 ```
 
-## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+```{r, echo = FALSE, eval = TRUE, cache = TRUE, fig.height=4, fig.width=8}
+par(mfrow=c(2,4), mar=c(1,1,1,1), oma=c(0.5,0.5,0.5,0.5))
+temp.mat2 <- scale(log(temp.mat))
+for(i in 1:8){
+  image(matrix(as.matrix(temp.mat2)[, i], nrow = 1024), zlim = c(-2, 2), xaxt = "n", yaxt = "n")
+}
+```
 
-```{r, echo = TRUE, cache = TRUE}
-image(matrix(log(as.matrix(temp.mat))[, 1], nrow = 1024), zlim = c(-2, 2),
+
+## Generate Usable Data - PCA'ed Data {.flexbox .vcenter .smaller}
+
+```{r, echo = TRUE, eval = FALSE, cache = TRUE}
+pca.mod <- prcomp(temp.mat2)
+temp.mat3 <- predict(pca.mod, temp.mat2)
+image(matrix(as.matrix(temp.mat3)[, 1], nrow = 1024), zlim = c(-2, 2),
       xaxt = "n", yaxt = "n")
 ```
 
-## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
+```{r, echo = FALSE, eval = TRUE, cache = TRUE, fig.height=4, fig.width=8}
+par(mfrow=c(2,4), mar=c(1,1,1,1), oma=c(0.5,0.5,0.5,0.5))
+pca.mod <- prcomp(temp.mat2)
+temp.mat3 <- predict(pca.mod, temp.mat2)
+for(i in 1:8){
+  image(matrix(as.matrix(temp.mat3)[, i], nrow = 1024), zlim = c(-2, 2), xaxt = "n", yaxt = "n")
+}
+```
 
-Untransformed AIA Images
-
-<img src="images/AIAUntransformed.png" style="width: 750px;"/>
-
-## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
-
-Logged AIA Images
-
-<img src="images/AIALog.png" style="width: 750px;"/>
-
-## Generate Usable Data - Data Exploration {.flexbox .vcenter .smaller}
-
-Logged, centered, scaled, PCA-ed AIA Images
-
-<img src="images/AIALogPCA.png" style="width: 750px;"/>
 
 ## Generate Usable Data - Scale  {.smaller}
 
 ```{r, echo = FALSE, eval = TRUE}
 target.dir = "data/"
+temp.date <- "2017-09-07" # Sys.Date()
 all.channel.index.POSIX <- as.POSIXct(read.csv(paste0(target.dir,
                                                       "AIA_index_allChannels_",
-                                                      Sys.Date(),".csv"),
+                                                      temp.date,".csv"),
                                                stringsAsFactors = FALSE)[[1]],
                                       tz = "UTC", format = "%Y-%m-%d %H:%M:%S")
 ```
@@ -497,7 +540,9 @@ cat.str
 ## Deep Learning
 
 > is just a rebranding of neural networks.
+
 * Geoff Hinton(?), (paraphrased from memory)
+
 * Deep Learning Summer School, UCLA, 2012
 
 ![](images/CIFAR.png)
@@ -530,7 +575,7 @@ https://www.ipam.ucla.edu/programs/summer-schools/graduate-summer-school-deep-le
 
 ## Frameworks {.smaller}
 
-![](images/JJ.png)
+<img src="images/JJ.png" style="width: 500px;"/>
 
 ## Tensorflow
 
@@ -541,9 +586,6 @@ https://www.ipam.ucla.edu/programs/summer-schools/graduate-summer-school-deep-le
     + Hence the JJ intervention
     + Need this to get full force of the GPU
 * My team used Keras (in Python) to access Tensorflow as a backend
-
-## Tensorflow
-
 
 
 ## MXNet
@@ -561,9 +603,9 @@ https://www.ipam.ucla.edu/programs/summer-schools/graduate-summer-school-deep-le
 
 I've talked enough about data, but clearly you need lots of storage.
 
-## Hardware
+## Hardware {.smaller}
 
-![](images/BlackLotus.jpeg)
+<img src="images/BlackLotus.jpeg" style="width: 350px;"/>
 
 ## Hardware
 
